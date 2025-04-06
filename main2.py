@@ -1,4 +1,6 @@
-from pygame import*
+from random import randint
+
+from pygame import *
 
 WINDOW_WIDTH = 400
 WINDOW_HEIGHT = 500
@@ -17,6 +19,7 @@ class GameSprite(sprite.Sprite):
         screen.blit(self.image, (self.rect.x, self.rect.y))
 
 class Player(GameSprite):
+    bullets = sprite.Group()
 
     def update(self, screen):
         keys = key.get_pressed()
@@ -26,6 +29,14 @@ class Player(GameSprite):
             self.rect.x += self.speed
 
         super().update(screen)
+
+    def fire(self):
+           bullet = Bullet("SpaceshipShooterGodot/Bullet/laser-bolts.png", self.rect.centerx, self.rect.top, 15, 20, 15)
+           self.bullets.add(bullet)
+
+    def draw_bullets(self, screen):
+        self.bullets.update()
+        self.bullets.draw(screen)
 
 class Background(GameSprite):
     def __init__(self,image_name, x, y, width, height, speed):
@@ -48,14 +59,76 @@ class Map:
         self.background2.update(screen)
 
 
+class Enemy(GameSprite):
+
+    def update(self):
+        self.rect.y += self.speed
+        global lost
+        if self.rect.y >= 400:
+            lost += 1
+            self.rect.x = randint(0, 600)
+            self.rect.y = 0
+            self.speed = randint(1, 3)
+
+
+class Bullet(GameSprite):
+    def update(self):
+        self.rect.y -= self.speed
+        if self.rect.y < 0:
+            self.kill()
+
+
+lost = 0
+
+bullets = sprite.Group()
+enemies = sprite.Group()
+for i in range(5):
+    enemy = Enemy("SpaceshipShooterGodot/Enemies/enemy-medium.png", randint(0, 600), 0, 80, 50, randint(1, 3))
+    enemies.add(enemy)
+
+
+
 window = display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT,))
+display.set_caption("Megashooter")
 
 player = Player("SpaceshipShooterGodot/Player/ship.png", 5, 400, 70, 100, 10)
 clock = time.Clock()
+fps = 60
+mixer.init()
+mixer.music.load("spaceship shooter music/spaceship shooter .ogg")
+mixer.music.play()
+
+font.init()
+font1 = font.Font(None, 70)
+
+win = font1.render("    Win!!!", True, (210, 215, 0))
+lose = font1.render("   Lose!!!", True, (210, 0, 0))
+
+font2 = font.Font(None, 36)
 
 map = Map()
-
+score = 0
 clock = time.Clock()
+
+score = 0
+finish = False
+run = True
+while run:
+    for e in event.get():
+        if e.type == QUIT:
+            run = False
+
+        if e.type == KEYDOWN and e.key == K_SPACE:
+            player.fire()
+
+    if not finish:
+        window.blit(window, (0, 0))
+
+        text = font2.render(f"Рахунок: {score}", True, (255,255,255))
+        text_lose = font2.render(f"Пропущено: {lost}", True, (255,255,255))
+        window.blit(text, (10, 20))
+        window.blit(text_lose, (510, 20))
+
 
 run = True
 menu = False
@@ -64,8 +137,31 @@ while run:
     for e in event.get():
         if e.type == QUIT:
             run = False
+        if e.type == MOUSEBUTTONDOWN:
+            player.fire()
 
     map.update(window)
+
+    if player.bullets:
+        player.draw_bullets(window)
+
+    enemies.update()
+    enemies.draw(window)
+
+    collides = sprite.groupcollide(enemies, player.bullets, True, True)
+    for c in collides:
+        score += 1
+        enemy = Enemy("SpaceshipShooterGodot/Enemies/enemy-medium.png", randint(0, 600), 0, 80, 50, randint(1, 3))
+        enemies.add(enemy)
+
+        if score >= 100:
+            finish = True
+            window.blit(win, (200, 200))
+
+        if lost >= 5:
+            finish = True
+            window.blit(lose, (200, 200))
+
 
     player.update(window)
 
