@@ -18,7 +18,29 @@ class GameSprite(sprite.Sprite):
     def update(self, screen):
         screen.blit(self.image, (self.rect.x, self.rect.y))
 
-class Player(GameSprite):
+class AnimatedSprite(sprite.Sprite):
+    def __init__(self, sprite_sheet, x, y, width, height, speed):
+        self.sprite_sheet = image.load(sprite_sheet)
+        self.width = width
+        self.height = height
+        self.all_frames = self.loadsprites()
+        self.image = self.all_frames[0]
+        self.rect = self.image.get_rect()
+        self.speed = speed
+
+    def loadsprites(self):
+        frames = []
+        rows = self.sprite_sheet.get_height() // self.height
+        cols = self.sprite_sheet.get_width() // self.width
+        for i in range(rows):
+            for j in range(cols):
+                frame = Surface((self.width, self.height))
+                frame.blit(self.sprite_sheet, (j*self.width, i*self.width))
+                frame = transform.scale(frame, (frame.get_width() * 2, frame.get_height() * 2))
+                frames.append(frame)
+        return frames
+
+class Player(AnimatedSprite):
     bullets = sprite.Group()
 
     def update(self, screen):
@@ -91,7 +113,7 @@ for i in range(5):
 window = display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT,))
 display.set_caption("Megashooter")
 
-player = Player("SpaceshipShooterGodot/Player/ship.png", 5, 400, 70, 100, 10)
+player = Player("SpaceshipShooterGodot/Player/ship.png", 5, 400, 16, 24, 10)
 clock = time.Clock()
 fps = 60
 mixer.init()
@@ -162,6 +184,11 @@ while run:
             finish = True
             window.blit(lose, (200, 200))
 
+
+    player.update(window)
+
+    display.update()
+    clock.tick(FPS)
 
     player.update(window)
 
